@@ -1,4 +1,4 @@
-const CACHE_NAME = 'options-pnl-v1';
+const CACHE_NAME = 'options-pnl-v3';
 const FILES_TO_CACHE = [
   './index.html',
   './manifest.json',
