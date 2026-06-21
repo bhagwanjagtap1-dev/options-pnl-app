@@ -71,7 +71,7 @@
     margin-bottom: 6px;
     font-weight: 500;
   }
-  input {
+  input, select {
     width: 100%;
     font-size: 17px;
     padding: 11px 12px;
@@ -81,7 +81,15 @@
     color: var(--text-primary);
     outline: none;
   }
-  input:focus {
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%23888780" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+  input:focus, select:focus {
     border-color: #185FA5;
     box-shadow: 0 0 0 2px rgba(24,95,165,0.2);
   }
@@ -139,7 +147,9 @@
     </div>
     <div>
       <label>No. of lots</label>
-      <input type="number" id="numLots" inputmode="numeric" placeholder="e.g. 2">
+      <select id="numLots">
+        <option value="">Select</option>
+      </select>
     </div>
   </div>
 
@@ -188,9 +198,41 @@
 </div>
 
 <script>
-const inputs = ['entry', 'qtyPerLot', 'numLots', 'slPrice', 'targetPrice'];
-inputs.forEach(id => {
-  document.getElementById(id).addEventListener('input', calculate);
+const ALL_FIELDS = ['entry', 'qtyPerLot', 'numLots', 'slPrice', 'targetPrice'];
+const PERSISTED_FIELDS = ['qtyPerLot'];
+const STORAGE_PREFIX = 'optionsPnL_';
+
+// Populate "No. of lots" dropdown with 1 to 100
+const numLotsSelect = document.getElementById('numLots');
+for (let i = 1; i <= 100; i++) {
+  const opt = document.createElement('option');
+  opt.value = i;
+  opt.textContent = i;
+  numLotsSelect.appendChild(opt);
+}
+
+// On load: only qtyPerLot restores from memory. Everything else starts blank.
+PERSISTED_FIELDS.forEach(id => {
+  const saved = localStorage.getItem(STORAGE_PREFIX + id);
+  if (saved !== null) {
+    document.getElementById(id).value = saved;
+  }
+});
+
+ALL_FIELDS.forEach(id => {
+  const el = document.getElementById(id);
+  const evt = (el.tagName === 'SELECT') ? 'change' : 'input';
+  el.addEventListener(evt, () => {
+    if (PERSISTED_FIELDS.includes(id)) {
+      const val = el.value;
+      if (val === '') {
+        localStorage.removeItem(STORAGE_PREFIX + id);
+      } else {
+        localStorage.setItem(STORAGE_PREFIX + id, val);
+      }
+    }
+    calculate();
+  });
 });
 
 function fmtCurrency(n) {
@@ -265,6 +307,9 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   });
 }
+
+calculate();
+
 </script>
 </body>
 </html>
