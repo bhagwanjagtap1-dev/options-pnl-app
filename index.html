@@ -107,9 +107,11 @@
     margin-bottom: 12px;
   }
   .card-secondary { background: var(--card-bg); border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .card-display { background: var(--bg); border: 1px dashed var(--border); display: flex; justify-content: space-between; align-items: center; }
   .card-danger { background: var(--danger-bg); }
   .card-success { background: var(--success-bg); }
   .card-info { background: var(--info-bg); display: flex; justify-content: space-between; align-items: center; }
+  .card-rr { background: var(--info-bg); text-align: center; padding: 16px; }
   .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
   .card-label { font-size: 13px; margin: 0 0 4px; font-weight: 500; }
   .card-value { font-size: 22px; font-weight: 600; margin: 0; }
@@ -148,7 +150,7 @@
     <div>
       <label>No. of lots</label>
       <select id="numLots">
-        <option value="">Select</option>
+        <option value="1" selected>1</option>
       </select>
     </div>
   </div>
@@ -166,9 +168,9 @@
 
   <div class="divider"></div>
 
-  <div class="card card-secondary">
+  <div class="card card-display">
     <div>
-      <p class="card-label" style="color: var(--text-secondary);">Total quantity</p>
+      <p class="card-label" style="color: var(--text-secondary);">Total quantity <span style="font-weight: 400; opacity: 0.7;">(calculated)</span></p>
       <p class="card-sub" id="qty-note" style="color: var(--text-tertiary);">&nbsp;</p>
     </div>
     <p class="card-value" id="totalQty">0</p>
@@ -187,9 +189,9 @@
     </div>
   </div>
 
-  <div class="card card-info">
-    <p style="font-size: 14px; color: var(--info-text); margin: 0; font-weight: 600;">Risk : reward</p>
-    <p style="font-size: 22px; font-weight: 600; margin: 0; color: var(--info-text);" id="rrRatio">&mdash;</p>
+  <div class="card card-rr">
+    <p style="font-size: 13px; color: var(--info-text); margin: 0 0 4px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em;">Risk : Reward</p>
+    <p style="font-size: 28px; font-weight: 600; margin: 0; color: var(--info-text);" id="rrRatio">&mdash;</p>
   </div>
 
   <p class="error" id="errorMsg"></p>
@@ -202,9 +204,9 @@ const ALL_FIELDS = ['entry', 'qtyPerLot', 'numLots', 'slPrice', 'targetPrice'];
 const PERSISTED_FIELDS = ['qtyPerLot'];
 const STORAGE_PREFIX = 'optionsPnL_';
 
-// Populate "No. of lots" dropdown with 1 to 100
+// Populate "No. of lots" dropdown with 2 to 100 (1 is already in the HTML as default)
 const numLotsSelect = document.getElementById('numLots');
-for (let i = 1; i <= 100; i++) {
+for (let i = 2; i <= 100; i++) {
   const opt = document.createElement('option');
   opt.value = i;
   opt.textContent = i;
