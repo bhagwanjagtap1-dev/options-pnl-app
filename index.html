@@ -170,22 +170,22 @@
 
   <div class="card card-display">
     <div>
-      <p class="card-label" style="color: var(--text-secondary);">Total quantity <span style="font-weight: 400; opacity: 0.7;">(calculated)</span></p>
+      <p class="card-label" style="color: var(--text-secondary);">Total capital <span style="font-weight: 400; opacity: 0.7;">(calculated)</span></p>
       <p class="card-sub" id="qty-note" style="color: var(--text-tertiary);">&nbsp;</p>
     </div>
-    <p class="card-value" id="totalQty">0</p>
+    <p class="card-value" id="totalCapital">&#8377;0</p>
   </div>
 
   <div class="stat-row">
     <div class="card card-danger">
       <p class="card-label" style="color: var(--danger-text);">Max loss (at SL)</p>
       <p class="card-value" style="color: var(--danger-text);" id="maxLoss">&#8377;0</p>
-      <p class="card-sub" style="color: var(--danger-text);" id="lossPoints">0 pts</p>
+      <p class="card-sub" style="color: var(--danger-text);" id="lossPoints">0%</p>
     </div>
     <div class="card card-success">
       <p class="card-label" style="color: var(--success-text);">Max profit (at target)</p>
       <p class="card-value" style="color: var(--success-text);" id="maxProfit">&#8377;0</p>
-      <p class="card-sub" style="color: var(--success-text);" id="profitPoints">0 pts</p>
+      <p class="card-sub" style="color: var(--success-text);" id="profitPoints">0%</p>
     </div>
   </div>
 
@@ -253,14 +253,16 @@ function calculate() {
   errorEl.style.display = 'none';
 
   const totalQty = (qtyPerLot > 0 && numLots > 0) ? qtyPerLot * numLots : 0;
-  document.getElementById('totalQty').textContent = totalQty.toLocaleString('en-IN');
-  document.getElementById('qty-note').textContent = (qtyPerLot > 0 && numLots > 0) ? (qtyPerLot + ' x ' + numLots + ' lots') : ' ';
+  const totalCapital = (entry > 0 && totalQty > 0) ? entry * totalQty : 0;
+
+  document.getElementById('totalCapital').textContent = totalCapital > 0 ? '\u20b9' + Math.round(totalCapital).toLocaleString('en-IN') : '\u20b90';
+  document.getElementById('qty-note').textContent = (qtyPerLot > 0 && numLots > 0) ? (qtyPerLot + ' x ' + numLots + ' lots = ' + totalQty.toLocaleString('en-IN') + ' qty') : ' ';
 
   if (!entry || !totalQty) {
     document.getElementById('maxLoss').textContent = '\u20b90';
     document.getElementById('maxProfit').textContent = '\u20b90';
-    document.getElementById('lossPoints').textContent = '0 pts';
-    document.getElementById('profitPoints').textContent = '0 pts';
+    document.getElementById('lossPoints').textContent = '0%';
+    document.getElementById('profitPoints').textContent = '0%';
     document.getElementById('rrRatio').textContent = '\u2014';
     return;
   }
@@ -282,11 +284,14 @@ function calculate() {
   const maxLossAmount = lossPerUnit * totalQty;
   const maxProfitAmount = profitPerUnit * totalQty;
 
+  const lossPct = totalCapital > 0 ? (maxLossAmount / totalCapital) * 100 : 0;
+  const profitPct = totalCapital > 0 ? (maxProfitAmount / totalCapital) * 100 : 0;
+
   document.getElementById('maxLoss').textContent = maxLossAmount > 0 ? fmtCurrency(-maxLossAmount) : '\u20b90';
-  document.getElementById('lossPoints').textContent = Math.abs(Math.round(lossPerUnit * 100) / 100) + ' pts/unit';
+  document.getElementById('lossPoints').textContent = (Math.round(lossPct * 100) / 100) + '% of capital';
 
   document.getElementById('maxProfit').textContent = maxProfitAmount > 0 ? fmtCurrency(maxProfitAmount) : '\u20b90';
-  document.getElementById('profitPoints').textContent = Math.abs(Math.round(profitPerUnit * 100) / 100) + ' pts/unit';
+  document.getElementById('profitPoints').textContent = (Math.round(profitPct * 100) / 100) + '% of capital';
 
   if (maxLossAmount > 0 && maxProfitAmount > 0) {
     const ratio = maxProfitAmount / maxLossAmount;
