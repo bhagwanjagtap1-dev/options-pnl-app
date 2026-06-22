@@ -131,11 +131,45 @@
     color: var(--text-tertiary);
     margin-top: 24px;
   }
+  .tabs {
+    display: flex;
+    gap: 6px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 4px;
+    margin-bottom: 20px;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 9px 8px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .tab-btn.active {
+    background: var(--info-bg);
+    color: var(--info-text);
+  }
+  .tool-panel { display: none; }
+  .tool-panel.active { display: block; }
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>Options P&amp;L Calculator</h1>
+  <h1 id="appTitle">Options P&amp;L Calculator</h1>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-pnl" type="button">P&amp;L Calculator</button>
+    <button class="tab-btn" id="tab-possize" type="button">Position Size</button>
+  </div>
+
+  <div id="panel-pnl" class="tool-panel active">
 
   <div class="field">
     <label>Entry price (premium)</label>
@@ -195,6 +229,67 @@
   </div>
 
   <p class="error" id="errorMsg"></p>
+
+  </div>
+
+  <div id="panel-possize" class="tool-panel">
+
+    <div class="field">
+      <label>Entry price (premium)</label>
+      <input type="number" id="ps-entry" inputmode="decimal" placeholder="e.g. 120.50">
+    </div>
+
+    <div class="field">
+      <label class="label-danger">Stop loss (price)</label>
+      <input type="number" id="ps-slPrice" inputmode="decimal" placeholder="e.g. 95">
+    </div>
+
+    <div class="row field">
+      <div>
+        <label>Qty per lot</label>
+        <input type="number" id="ps-qtyPerLot" inputmode="numeric" placeholder="e.g. 75">
+      </div>
+      <div>
+        <label>Total capital (&#8377;)</label>
+        <input type="number" id="ps-capital" inputmode="numeric" placeholder="e.g. 10000">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Max risk per trade (%)</label>
+      <input type="number" id="ps-riskPct" inputmode="decimal" placeholder="e.g. 2" step="0.1">
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="card card-display">
+      <div>
+        <p class="card-label" style="color: var(--text-secondary);">Risk per lot <span style="font-weight: 400; opacity: 0.7;">(calculated)</span></p>
+        <p class="card-sub" id="ps-risk-note" style="color: var(--text-tertiary);">&nbsp;</p>
+      </div>
+      <p class="card-value" id="ps-riskPerLot">&#8377;0</p>
+    </div>
+
+    <div class="card card-rr" style="margin-bottom: 12px;">
+      <p style="font-size: 13px; color: var(--info-text); margin: 0 0 4px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em;">Max Lots Allowed</p>
+      <p style="font-size: 32px; font-weight: 600; margin: 0; color: var(--info-text);" id="ps-maxLots">&mdash;</p>
+    </div>
+
+    <div class="stat-row">
+      <div class="card card-secondary" style="flex-direction: column; align-items: flex-start;">
+        <p class="card-label" style="color: var(--text-secondary);">Max risk budget</p>
+        <p class="card-value" style="font-size: 18px;" id="ps-maxRiskBudget">&#8377;0</p>
+      </div>
+      <div class="card card-danger" style="display: block;">
+        <p class="card-label" style="color: var(--danger-text);">Actual risk at max lots</p>
+        <p class="card-value" style="font-size: 18px; color: var(--danger-text);" id="ps-actualRisk">&#8377;0</p>
+        <p class="card-sub" style="color: var(--danger-text);" id="ps-actualRiskPct">0% of capital</p>
+      </div>
+    </div>
+
+    <p class="error" id="ps-errorMsg"></p>
+
+  </div>
 
   <p class="footer-note">Calculates locally on your device. No data is sent or stored anywhere.</p>
 </div>
@@ -316,6 +411,112 @@ if ('serviceWorker' in navigator) {
 }
 
 calculate();
+
+// ─── Tab switching ───
+const tabPnl = document.getElementById('tab-pnl');
+const tabPosSize = document.getElementById('tab-possize');
+const panelPnl = document.getElementById('panel-pnl');
+const panelPosSize = document.getElementById('panel-possize');
+const appTitle = document.getElementById('appTitle');
+
+tabPnl.addEventListener('click', () => {
+  tabPnl.classList.add('active');
+  tabPosSize.classList.remove('active');
+  panelPnl.classList.add('active');
+  panelPosSize.classList.remove('active');
+  appTitle.textContent = 'Options P&L Calculator';
+});
+
+tabPosSize.addEventListener('click', () => {
+  tabPosSize.classList.add('active');
+  tabPnl.classList.remove('active');
+  panelPosSize.classList.add('active');
+  panelPnl.classList.remove('active');
+  appTitle.textContent = 'Position Size Calculator';
+  calculatePosSize();
+});
+
+// ─── Position Size Tool ───
+const PS_PERSISTED_FIELDS = ['ps-qtyPerLot'];
+const PS_ALL_FIELDS = ['ps-entry', 'ps-slPrice', 'ps-qtyPerLot', 'ps-capital', 'ps-riskPct'];
+
+PS_PERSISTED_FIELDS.forEach(id => {
+  const saved = localStorage.getItem(STORAGE_PREFIX + id);
+  if (saved !== null) {
+    document.getElementById(id).value = saved;
+  }
+});
+
+PS_ALL_FIELDS.forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    if (PS_PERSISTED_FIELDS.includes(id)) {
+      const val = document.getElementById(id).value;
+      if (val === '') {
+        localStorage.removeItem(STORAGE_PREFIX + id);
+      } else {
+        localStorage.setItem(STORAGE_PREFIX + id, val);
+      }
+    }
+    calculatePosSize();
+  });
+});
+
+function calculatePosSize() {
+  const entry = parseFloat(document.getElementById('ps-entry').value);
+  const slPrice = parseFloat(document.getElementById('ps-slPrice').value);
+  const qtyPerLot = parseFloat(document.getElementById('ps-qtyPerLot').value);
+  const capital = parseFloat(document.getElementById('ps-capital').value);
+  const riskPct = parseFloat(document.getElementById('ps-riskPct').value);
+
+  const errorEl = document.getElementById('ps-errorMsg');
+  errorEl.style.display = 'none';
+
+  const allFilled = entry > 0 && slPrice >= 0 && qtyPerLot > 0 && capital > 0 && riskPct > 0;
+
+  if (!allFilled) {
+    document.getElementById('ps-riskPerLot').textContent = '\u20b90';
+    document.getElementById('ps-risk-note').textContent = ' ';
+    document.getElementById('ps-maxLots').textContent = '\u2014';
+    document.getElementById('ps-maxRiskBudget').textContent = '\u20b90';
+    document.getElementById('ps-actualRisk').textContent = '\u20b90';
+    document.getElementById('ps-actualRiskPct').textContent = '0% of capital';
+    return;
+  }
+
+  if (slPrice >= entry) {
+    errorEl.textContent = 'Stop loss should be below entry price';
+    errorEl.style.display = 'block';
+    document.getElementById('ps-riskPerLot').textContent = '\u20b90';
+    document.getElementById('ps-maxLots').textContent = '\u2014';
+    return;
+  }
+
+  const riskPerUnit = entry - slPrice;
+  const riskPerLot = riskPerUnit * qtyPerLot;
+  const maxRiskBudget = capital * (riskPct / 100);
+
+  document.getElementById('ps-riskPerLot').textContent = '\u20b9' + Math.round(riskPerLot).toLocaleString('en-IN');
+  document.getElementById('ps-risk-note').textContent = riskPerUnit.toFixed(2) + ' pts \u00d7 ' + qtyPerLot + ' qty/lot';
+  document.getElementById('ps-maxRiskBudget').textContent = '\u20b9' + Math.round(maxRiskBudget).toLocaleString('en-IN');
+
+  if (riskPerLot <= 0) {
+    document.getElementById('ps-maxLots').textContent = '\u2014';
+    return;
+  }
+
+  const maxLots = Math.floor(maxRiskBudget / riskPerLot);
+  const actualRisk = maxLots * riskPerLot;
+  const actualRiskPct = capital > 0 ? (actualRisk / capital) * 100 : 0;
+
+  document.getElementById('ps-maxLots').textContent = maxLots;
+  document.getElementById('ps-actualRisk').textContent = '\u20b9' + Math.round(actualRisk).toLocaleString('en-IN');
+  document.getElementById('ps-actualRiskPct').textContent = (Math.round(actualRiskPct * 100) / 100) + '% of capital';
+
+  if (maxLots === 0) {
+    errorEl.textContent = 'Risk budget too small for even 1 lot at this stop loss \u2014 widen capital, risk %, or tighten stop loss.';
+    errorEl.style.display = 'block';
+  }
+}
 
 </script>
 </body>
